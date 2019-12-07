@@ -8,7 +8,9 @@ logger = logging.getLogger('pywebview')
 guilib = None
 forced_gui_ = None
 
-def initialize(forced_gui=None):
+def initialize(forced_gui=None, quiet=False):
+    log_error = logger.error if quiet else logger.exception
+
     def import_gtk():
         global guilib
 
@@ -18,7 +20,7 @@ def initialize(forced_gui=None):
 
             return True
         except (ImportError, ValueError) as e:
-            logger.exception('GTK cannot be loaded')
+            log_error('GTK cannot be loaded')
 
             return False
 
@@ -30,7 +32,7 @@ def initialize(forced_gui=None):
 
             return True
         except ImportError as e:
-            logger.exception('QT cannot be loaded')
+            log_error('QT cannot be loaded')
             return False
 
     def import_cocoa():
@@ -41,7 +43,7 @@ def initialize(forced_gui=None):
 
             return True
         except ImportError:
-            logger.exception('PyObjC cannot be loaded')
+            log_error('PyObjC cannot be loaded')
 
             return False
 
@@ -52,7 +54,7 @@ def initialize(forced_gui=None):
             import webview.platforms.winforms as guilib
             return True
         except ImportError as e:
-            logger.exception('pythonnet cannot be loaded')
+            log_error('pythonnet cannot be loaded')
             return False
 
     def try_import(guis):

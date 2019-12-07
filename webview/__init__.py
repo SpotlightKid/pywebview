@@ -48,7 +48,8 @@ _http_server = False
 token = _token
 windows = []
 
-def start(func=None, args=None, localization={}, gui=None, debug=False, http_server=False):
+def start(func=None, args=None, localization={}, gui=None, debug=False, http_server=False,
+          quiet=True):
     global guilib, _debug, _multiprocessing, _http_server
 
     def _create_children(other_windows):
@@ -76,7 +77,7 @@ def start(func=None, args=None, localization={}, gui=None, debug=False, http_ser
     if len(windows) == 0:
         raise WebViewException('You must create a window first before calling this function.')
 
-    guilib = initialize(gui)
+    guilib = initialize(gui, quiet=quiet)
 
     # thanks to the buggy EdgeHTML, http server must be used for local urls
     if guilib.renderer == 'edgehtml':
