@@ -270,6 +270,15 @@ class Window:
         escaped_script = 'JSON.stringify(eval("{0}"))'.format(escape_string(script))
         return self.gui.evaluate_js(escaped_script, self.uid)
 
+    @_loaded_call
+    def add_shortcut(self, keyseq, handler):
+        """
+        Add a global application keyboard shortcut.
+        :param keyseq: The key sequence to trigger the handler, e.g. "Ctrl-Q" or "F11"
+        :param handler: The handler function which is called when the shortcut is triggered
+        """
+        return self.gui.add_shortcut(keyseq, handler, self.uid)
+
     @_shown_call
     def create_file_dialog(self, dialog_type=10, directory='', allow_multiple=False, save_filename='', file_types=()):
         """

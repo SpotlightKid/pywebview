@@ -399,6 +399,14 @@ class BrowserView:
 
         return result
 
+    def add_shortcut(self, keyseq, handler):
+        def run_handler(*args):
+            logger.info("Running handler for '%s', args: %r", keyseq, args)
+            handler()
+
+        key, mod = gtk.accelerator_parse(keyseq)
+        self._keyboard_shortcuts.connect(key, mod, 0, run_handler)
+
     def _set_js_api(self):
         def create_bridge():
             self.webview.run_javascript(parse_api_js(self.js_bridge.window, 'gtk', uid=self.js_bridge.uid))
@@ -565,3 +573,8 @@ def configure_transparency(c):
             background-image:none;
         }""")
     c.get_style_context().add_provider(transparentWindowStyleProvider, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+
+
+def add_shortcut(keyseq, handler, uid):
+    BrowserView.instances[uid].add_shortcut(keyseq, handler)

@@ -31,8 +31,8 @@ from PyQt5.QtCore import QT_VERSION_STR
 
 logger.debug('Using Qt %s' % QT_VERSION_STR)
 
-from PyQt5.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QApplication, QFileDialog, QMessageBox, QAction
-from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QApplication, QFileDialog, QMessageBox, QAction, QShortcut
+from PyQt5.QtGui import QColor, QKeySequence
 
 try:
     from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView, QWebEnginePage as QWebPage
@@ -69,6 +69,7 @@ class BrowserView(QMainWindow):
     current_url_trigger = QtCore.pyqtSignal()
     evaluate_js_trigger = QtCore.pyqtSignal(str, str)
     on_top_trigger = QtCore.pyqtSignal(bool)
+    add_shortcut_trigger = QtCore.pyqtSignal(object, object)
 
     class JSBridge(QtCore.QObject):
         qtype = QtCore.QJsonValue if is_webengine else str
@@ -294,6 +295,7 @@ class BrowserView(QMainWindow):
         self.evaluate_js_trigger.connect(self.on_evaluate_js)
         self.set_title_trigger.connect(self.on_set_title)
         self.on_top_trigger.connect(self.on_set_on_top)
+        self.add_shortcut_trigger.connect(self.on_add_shortcut)
 
         if is_webengine and platform.system() != 'OpenBSD':
             self.channel = QWebChannel(self.view.page())
@@ -442,11 +444,10 @@ class BrowserView(QMainWindow):
         if not self.text_select:
             script = disable_text_select.replace('\n', '')
 
-            try:  
+            try:
                 self.view.page().runJavaScript(script)
             except: # QT < 5.6
                 self.view.page().mainFrame().evaluateJavaScript(script)
-                
 
     def set_title(self, title):
         self.set_title_trigger.emit(title)
@@ -523,6 +524,9 @@ class BrowserView(QMainWindow):
         del self._js_results[unique_id]
 
         return result
+
+    def add_shortcut(self, keyseq, handler):
+        self.add_shortcut_trigger.emit(keyseq, handler)
 
     def _set_js_api(self):
         def _register_window_object():
@@ -690,3 +694,7 @@ def get_position(uid):
 def get_size(uid):
     window = BrowserView.instances[uid]
     return window.width(), window.height()
+
+def add_shortcut(keyseq, handler, uid):
+    BrowserView.instances[uid].add_shortcut(keyseq, handler)
+
