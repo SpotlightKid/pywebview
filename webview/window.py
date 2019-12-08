@@ -270,7 +270,7 @@ class Window:
         escaped_script = 'JSON.stringify(eval("{0}"))'.format(escape_string(script))
         return self.gui.evaluate_js(escaped_script, self.uid)
 
-    @_loaded_call
+    @_shown_call
     def add_shortcut(self, keyseq, handler):
         """
         Add a global application keyboard shortcut.
