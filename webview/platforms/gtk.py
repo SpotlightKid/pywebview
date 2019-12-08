@@ -25,11 +25,13 @@ logger = logging.getLogger('pywebview')
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
+gi.require_version('Gio', '2.0')
 gi.require_version('WebKit2', '4.0')
 
-from gi.repository import Gtk as gtk
 from gi.repository import Gdk
+from gi.repository import Gio as gio
 from gi.repository import GLib as glib
+from gi.repository import Gtk as gtk
 from gi.repository import WebKit2 as webkit
 
 
@@ -39,6 +41,9 @@ webkit_ver = webkit.get_major_version(), webkit.get_minor_version(), webkit.get_
 old_webkit = webkit_ver[0] < 2 or webkit_ver[1] < 22
 
 renderer = 'gtkwebkit2'
+app = None
+_global_shortcuts = {}
+
 
 settings = {}
 
@@ -55,16 +60,19 @@ class BrowserView:
                 param = None
             return js_bridge_call(self.window, func_name, param, value_id)
 
-    def __init__(self, window):
+    def __init__(self, window, app):
         BrowserView.instances[window.uid] = self
         self.uid = window.uid
         self.pywebview_window = window
+
+        self.app = app
 
         self.is_fullscreen = False
         self.js_results = {}
 
         glib.threads_init()
-        self.window = gtk.Window(title=window.title)
+        self.window = gtk.ApplicationWindow(title=window.title)
+        self.window.set_application(self.app)
 
         self.shown = window.shown
         self.loaded = window.loaded
@@ -160,9 +168,6 @@ class BrowserView:
         for res in self.js_results.values():
             res['semaphore'].release()
 
-        while gtk.events_pending():
-            gtk.main_iteration()
-
         self.window.destroy()
         del BrowserView.instances[self.uid]
 
@@ -170,9 +175,6 @@ class BrowserView:
             windows.remove(self.pywebview_window)
 
         self.pywebview_window.closed.set()
-
-        if BrowserView.instances == {}:
-            gtk.main_quit()
 
     def on_destroy(self, widget=None, *data):
         dialog = gtk.MessageDialog(parent=self.window, flags=gtk.DialogFlags.MODAL & gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -260,7 +262,6 @@ class BrowserView:
         if gtk.main_level() == 0:
             if self.pywebview_window.hidden:
                 self.window.hide()
-            gtk.main()
         else:
             glib.idle_add(self.window.show_all)
 
@@ -400,12 +401,16 @@ class BrowserView:
         return result
 
     def add_shortcut(self, keyseq, handler):
-        def run_handler(*args):
-            logger.info("Running handler for '%s', args: %r", keyseq, args)
-            handler()
+        global _global_shortcuts
+        action_name = 'action_{}'.format(id(handler))
+        action = _global_shortcuts.get(action_name)
 
-        key, mod = gtk.accelerator_parse(keyseq)
-        self._keyboard_shortcuts.connect(key, mod, 0, run_handler)
+        if not action:
+            action = _global_shortcuts[action_name] = gio.SimpleAction.new(action_name)
+            action.connect('activate', lambda *args: handler())
+            self.app.set_accels_for_action("win.{}".format(action_name), [keyseq])
+
+        self.window.add_action(action)
 
     def _set_js_api(self):
         def create_bridge():
@@ -416,14 +421,20 @@ class BrowserView:
 
 
 def create_window(window):
-    def create():
-        browser = BrowserView(window)
+    global app
+
+    if app is None:
+        app = gtk.Application.new("com.flowrl.pywebview", 0)
+
+    def create(app, *args):
+        browser = BrowserView(window, app=app)
         browser.show()
 
     if window.uid == 'master':
-        create()
+        app.connect("activate", create, app)
+        app.run()
     else:
-        glib.idle_add(create)
+        glib.idle_add(create, app)
 
 
 def set_title(title, uid):
