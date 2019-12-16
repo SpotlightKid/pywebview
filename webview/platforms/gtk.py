@@ -406,6 +406,9 @@ class BrowserView:
         action = _global_shortcuts.get(action_name)
 
         if not action:
+            keyseq = keyseq.replace('Ctrl+', '<Control>')
+            keyseq = keyseq.replace('Shift+', '<Control>')
+            keyseq = keyseq.replace('Alt+', '<Alt>')
             action = _global_shortcuts[action_name] = gio.SimpleAction.new(action_name)
             action.connect('activate', lambda *args: handler())
             self.app.set_accels_for_action("win.{}".format(action_name), [keyseq])
